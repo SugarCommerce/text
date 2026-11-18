@@ -19,7 +19,7 @@ namespace SugarCommerce\Text\Display;
  * two hex colours of one hue: a `tint` pale enough to sit behind text and a
  * `shade` deep enough to be that text. White letters on a pastel cannot be
  * read, so the letters are the shade, and a pair is only worth keeping when
- * the shade can be read on its tint -- {@see self::contrast()} measures it.
+ * the shade can be read on its tint -- {@see Color::ratio()} measures it.
  *
  * Something that needs "one of several colours" -- a person's monogram, a
  * chart series, a tag -- takes one from here, so the accents of a plugin
@@ -128,15 +128,15 @@ final class Palette {
 	 * A palette as it arrived, made safe to draw with.
 	 *
 	 * For a list that came through a filter or an option. A colour is kept
-	 * when it has a `tint` and a `shade` that are hex colours (`#abc` or
-	 * `#aabbcc`, as `sanitize_hex_color()` accepts them); its `name` is the
-	 * key when it has none. Anything else is left out. An answer with
+	 * when it has a `tint` and a `shade` that are hex colours, written the
+	 * one way {@see Color::hex()} writes them (`#aabbcc`, lowercase, from
+	 * `#ABC`, `aabbcc` or `#aabbcc`); its `name` is the key when it has none. Anything else is left out. An answer with
 	 * nothing left in it is answered with the fallback: something has to be
 	 * drawn in a colour.
 	 *
 	 * Contrast is not checked here -- a darker brand pair that a site chose
 	 * on purpose is theirs to choose. Check it in a test with
-	 * {@see self::contrast()}.
+	 * {@see Color::readable()}.
 	 *
 	 * @since 1.0.0
 	 *
@@ -153,8 +153,8 @@ final class Palette {
 				continue;
 			}
 
-			$tint  = self::hex( $colour['tint'] ?? '' );
-			$shade = self::hex( $colour['shade'] ?? '' );
+			$tint  = Color::hex( $colour['tint'] ?? '' );
+			$shade = Color::hex( $colour['shade'] ?? '' );
 
 			if ( '' === $tint || '' === $shade ) {
 				continue;
@@ -200,74 +200,5 @@ final class Palette {
 		$keys = array_keys( $palette );
 
 		return (string) $keys[ crc32( $seed ) % count( $keys ) ];
-	}
-
-	/**
-	 * How well one colour reads on another: the WCAG contrast ratio.
-	 *
-	 * 1 for the same colour, 21 for black on white. 4.5 is AA for body
-	 * text, 3 for large text and for the parts of a control.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param string $one   A hex colour.
-	 * @param string $other Another.
-	 *
-	 * @return float The ratio, from 1 to 21; 1 when either is not a hex colour.
-	 */
-	public static function contrast( string $one, string $other ): float {
-		$one   = self::luminance( $one );
-		$other = self::luminance( $other );
-
-		if ( null === $one || null === $other ) {
-			return 1.0;
-		}
-
-		return ( max( $one, $other ) + 0.05 ) / ( min( $one, $other ) + 0.05 );
-	}
-
-	/**
-	 * A hex colour as it was given, or ''.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param mixed $value The value.
-	 *
-	 * @return string
-	 */
-	public static function hex( mixed $value ): string {
-		if ( ! is_string( $value ) ) {
-			return '';
-		}
-
-		return 1 === preg_match( '/^#([A-Fa-f0-9]{3}){1,2}$/', $value ) ? $value : '';
-	}
-
-	/**
-	 * A colour's relative luminance, as WCAG defines it.
-	 *
-	 * @param string $hex A hex colour.
-	 *
-	 * @return float|null 0 for black to 1 for white; null when it is not a colour.
-	 */
-	private static function luminance( string $hex ): ?float {
-		$hex = ltrim( self::hex( $hex ), '#' );
-
-		if ( '' === $hex ) {
-			return null;
-		}
-
-		if ( 3 === strlen( $hex ) ) {
-			$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
-		}
-
-		$channels = array();
-
-		foreach ( str_split( $hex, 2 ) as $pair ) {
-			$channel    = hexdec( $pair ) / 255;
-			$channels[] = $channel <= 0.04045 ? $channel / 12.92 : ( ( $channel + 0.055 ) / 1.055 ) ** 2.4;
-		}
-
-		return 0.2126 * $channels[0] + 0.7152 * $channels[1] + 0.0722 * $channels[2];
 	}
 }

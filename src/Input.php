@@ -26,8 +26,8 @@ namespace SugarCommerce\Text;
  * value that reaches a database.
  *
  * Text, keys and numbers; a URL or an origin; a code somebody pasted, an id
- * with a prefix, a colour; one of an allowed set; a list typed into a field.
- * An email address is `sugarcommerce/network`'s.
+ * with a prefix; one of an allowed set; a list typed into a field. An email
+ * address is `sugarcommerce/network`'s, a colour {@see Display\Color::hex()}.
  *
  * Plain PHP. What is safe to print is WordPress's business
  * (`sanitize_text_field()`, `wp_kses_post()`); this is about shape.
@@ -583,31 +583,6 @@ final class Input {
 		}
 
 		return self::int( $value, $min, $max, $min );
-	}
-
-	/**
-	 * A CSS hex colour, or ''.
-	 *
-	 * Six digits only. The three-digit form is valid CSS but doubles the
-	 * number of shapes anything downstream has to handle, and a caller
-	 * comparing stored values would then have `#fff` and `#ffffff` as two
-	 * different colours.
-	 *
-	 * Worth validating rather than escaping. A colour is usually interpolated
-	 * into a `style` attribute, where escaping does nothing useful -- the
-	 * dangerous input is not `<script>`, it is `red;background:url(...)`,
-	 * which survives every escaper and is still CSS.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param mixed $value Untrusted colour.
-	 *
-	 * @return string Lower-cased `#rrggbb`, or ''.
-	 */
-	public static function hex_colour( mixed $value ): string {
-		$value = is_scalar( $value ) ? trim( (string) $value ) : '';
-
-		return preg_match( '/^#[0-9a-f]{6}$/i', $value ) ? strtolower( $value ) : '';
 	}
 
 	/**

@@ -173,7 +173,6 @@ Input::origin( 'https://Shop.example.com/x' );  // "https://shop.example.com"
 Input::pasted_code( '“Order ID: 9AB 12”', 64, array( 'Order ID' ) ); // "9AB12"
 Input::prefixed_id( $stripe_price, 'price' );   // "price_1A2b", or ''
 Input::hex( $token, 64 );                       // a sha256, lower-cased, or ''
-Input::hex_colour( $brand );                    // "#6d28d9", or ''
 Input::json( $payload );                        // JSON kept byte for byte, or ''
 Input::list( "a, b\nc" );                       // ['a', 'b', 'c'], duplicates gone
 Input::lines( $textarea );                      // one entry per line, commas kept
@@ -265,11 +264,32 @@ echo Avatar::monogram( 'Ada Lovelace', 'ada@example.com', 32, array( 'class' => 
 Avatar::svg( 'Trance Essentials', 200, from_start: true );   // a data: URI placeholder for an <img>
 
 $palette = Palette::clean( apply_filters( 'myplugin_palette', Palette::sweet() ), Palette::sweet() );
-Palette::contrast( '#d0ecfb', '#0d5e8c' );                   // 5.7 -- 4.5 is WCAG AA
 
 // A line with a fading fill, as inline SVG: no script, no canvas.
 echo Sparkline::svg( $weekly_sales, array( 'label' => 'Up 12% on the four weeks before', 'emphasise_last' => true ) );
 ```
+
+### Colour
+
+`Color` is the one hex-colour helper of the SugarCommerce packages: fields, emails, flyouts and pdf use it rather than
+keeping their own. It reads a colour leniently and writes it one way, so two rows holding the same colour hold the same
+string, and anything that is not a colour -- a name, `rgb()`, `red;background:url(…)` -- is the fallback, never a guess.
+Contrast is WCAG's relative luminance everywhere (not YIQ brightness, which calls `#767676` light for the wrong reason).
+Core's `sanitize_hex_color()` keeps whatever spelling it was given and knows nothing of contrast, which is why this exists.
+
+```php
+use SugarCommerce\Text\Display\Color;
+
+Color::hex( '#E8A5C4' );                  // "#e8a5c4" -- also from "e8a5c4"; "#abc" is "#aabbcc"
+Color::hex( 'red', '#2271b1' );           // "#2271b1", the fallback
+Color::rgb( '#abc' );                     // [170, 187, 204], or null
+Color::rgba( '#2271b1', 0.1 );            // "rgba(34, 113, 177, 0.1)", or ''
+Color::contrast( $brand );                // "#000000" or "#ffffff", whichever reads on it
+Color::is_light( $brand );                // true when that is black
+Color::ratio( '#d0ecfb', '#0d5e8c' );     // 5.7 -- null when either is not a colour
+Color::readable( $text, $background );    // WCAG AA: 4.5, or 3 with large: true
+```
+
 
 ## Moving from arraypress/wp-*
 
@@ -282,6 +302,11 @@ arguments. Text domain `arraypress` is now `sugarcommerce`.
 | `ArrayPress\FormatUtils\Avatar` | `SugarCommerce\Text\Display\Avatar` |
 | `ArrayPress\FormatUtils\Palette` | `SugarCommerce\Text\Display\Palette` |
 | `ArrayPress\FormatUtils\Sparkline` | `SugarCommerce\Text\Display\Sparkline` |
+| `Palette::contrast( $one, $other )` | `Display\Color::ratio()` -- null, not 1, when either is not a colour |
+| `Palette::hex()` | `Display\Color::hex()` -- writes `#rrggbb` lower case, so `Palette::clean()` now does too |
+| `Input::hex_colour()` | `Display\Color::hex()` -- now also reads `#abc` and a colour without its `#` |
+| `ArrayPress\FieldKit\Support\Color` (fields' `Support\Color`) | `SugarCommerce\Text\Display\Color`, same methods |
+| `ArrayPress\RegisterEmails\Utils\Color::hex( $v, $fallback )` | `Display\Color::hex( $v, $fallback )`; `is_light()` is WCAG now, not YIQ brightness over 150 |
 | `ArrayPress\FormatUtils\{Text,Numbers,Booleans,Bytes,Duration,FileType,Csv,MissingColumns,Input}` | `SugarCommerce\Text\…`, same name |
 | `Str::contains_any()`, `contains_all()`, `starts_with()`, `ends_with()`, `matches_any()`, `is_alphanumeric()` | `Strings::` the same |
 | `Str::replace_first()`, `replace_last()`, `between()`, `reduce_whitespace()`, `remove_whitespace()`, `from()` | `Strings::` the same |

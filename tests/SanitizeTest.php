@@ -244,30 +244,6 @@ final class SanitizeTest extends TestCase {
 		$this->assertSame( '', Input::one_of( 'z', array( '', 'a', 'b' ), '' ) );
 	}
 
-	/* ── colours ────────────────────────────────────────────────────── */
-
-	public function test_a_hex_colour_is_lower_cased(): void {
-		$this->assertSame( '#6d28d9', Input::hex_colour( '#6D28D9' ) );
-		$this->assertSame( '#ffffff', Input::hex_colour( '  #FFFFFF  ' ) );
-	}
-
-	/**
-	 * The dangerous input is not `<script>`, which every escaper catches. It
-	 * is `red;background:url(...)`, which survives escaping and is still CSS.
-	 */
-	public function test_anything_that_is_not_six_hex_digits_is_refused(): void {
-		$this->assertSame( '', Input::hex_colour( 'red' ) );
-		$this->assertSame( '', Input::hex_colour( 'red;background:url(//evil)' ) );
-		$this->assertSame( '', Input::hex_colour( '#fff' ) );
-		$this->assertSame( '', Input::hex_colour( '#6d28d9;x' ) );
-		$this->assertSame( '', Input::hex_colour( '' ) );
-	}
-
-	public function test_a_non_scalar_colour_is_refused(): void {
-		$this->assertSame( '', Input::hex_colour( array( '#6d28d9' ) ) );
-		$this->assertSame( '', Input::hex_colour( null ) );
-	}
-
 	/* ── optional integers ──────────────────────────────────────────── */
 
 	/**

@@ -10,6 +10,7 @@ declare( strict_types=1 );
 namespace SugarCommerce\Text\Tests\Display;
 
 use SugarCommerce\Text\Display\Avatar;
+use SugarCommerce\Text\Display\Color;
 use SugarCommerce\Text\Numbers;
 use SugarCommerce\Text\Display\Palette;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -72,23 +73,11 @@ final class MonogramTest extends TestCase {
 
 		foreach ( $palette as $key => $colour ) {
 			$this->assertNotSame( '', $colour['name'], $key );
-			$this->assertGreaterThanOrEqual( 4.5, Palette::contrast( $colour['tint'], $colour['shade'] ), $key );
+			$this->assertGreaterThanOrEqual( 4.5, Color::ratio( $colour['tint'], $colour['shade'] ), $key );
 		}
 
-		$this->assertGreaterThanOrEqual( 4.5, Palette::contrast( Palette::NEUTRAL['tint'], Palette::NEUTRAL['shade'] ) );
+		$this->assertGreaterThanOrEqual( 4.5, Color::ratio( Palette::NEUTRAL['tint'], Palette::NEUTRAL['shade'] ) );
 		$this->assertSame( $palette, Palette::clean( $palette ), 'The sweet palette is clean as it is.' );
-	}
-
-	/**
-	 * The contrast ratio is WCAG's.
-	 */
-	public function test_contrast(): void {
-		$this->assertEqualsWithDelta( 21.0, Palette::contrast( '#000000', '#ffffff' ), 0.001 );
-		$this->assertEqualsWithDelta( 21.0, Palette::contrast( '#FFF', '#000' ), 0.001, 'Either order, short form.' );
-		$this->assertEqualsWithDelta( 1.0, Palette::contrast( '#777777', '#777777' ), 0.001 );
-		$this->assertEqualsWithDelta( 4.48, Palette::contrast( '#777777', '#ffffff' ), 0.01, 'The grey that just fails AA.' );
-		$this->assertEqualsWithDelta( 4.0, Palette::contrast( '#ff0000', '#ffffff' ), 0.01 );
-		$this->assertEqualsWithDelta( 1.0, Palette::contrast( 'red', '#ffffff' ), 0.001, 'Not a hex colour is no contrast.' );
 	}
 
 	/**
@@ -121,7 +110,8 @@ final class MonogramTest extends TestCase {
 		);
 
 		$this->assertSame( array( 'liquorice', 'unnamed' ), array_keys( $cleaned ) );
-		$this->assertSame( '#EEEEEE', $cleaned['liquorice']['tint'], 'Kept as given.' );
+		$this->assertSame( '#eeeeee', $cleaned['liquorice']['tint'], 'Written the one way Color writes it.' );
+		$this->assertSame( '#111111', $cleaned['liquorice']['shade'], 'The short form widened.' );
 		$this->assertSame( 'unnamed', $cleaned['unnamed']['name'], 'The key names a colour with no name.' );
 
 		$fallback = array( 'x' => Palette::NEUTRAL );
@@ -130,13 +120,6 @@ final class MonogramTest extends TestCase {
 		$this->assertSame( $fallback, Palette::clean( 'nonsense', $fallback ) );
 		$this->assertSame( array(), Palette::clean( null ) );
 
-		$this->assertSame( '#abc', Palette::hex( '#abc' ) );
-		$this->assertSame( '#AABBCC', Palette::hex( '#AABBCC' ) );
-		$this->assertSame( '', Palette::hex( '#aabbccdde' ), 'Nine digits is not a colour.' );
-		$this->assertSame( '', Palette::hex( '#abcd' ) );
-		$this->assertSame( '', Palette::hex( 'abc' ) );
-		$this->assertSame( '', Palette::hex( ' #abc' ) );
-		$this->assertSame( '', Palette::hex( 123 ) );
 	}
 
 	/**

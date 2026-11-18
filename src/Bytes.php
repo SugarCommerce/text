@@ -25,6 +25,13 @@ namespace SugarCommerce\Text;
  * from. Binary is the default here because this is usually describing a
  * file.
  *
+ * Inside WordPress, a plain "how big is this file" label is core's
+ * `size_format()` -- use that. This class is kept for what core does not
+ * do: decimal units, one decimal that drops a `.0` (core prints
+ * `100.0 MB`, or rounds `1.5 KB` to `2 KB`), a locale named per call
+ * rather than the site's, parse() and rate(), and running without
+ * WordPress loaded at all.
+ *
  * @since 1.0.0
  */
 final readonly class Bytes {
