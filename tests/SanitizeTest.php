@@ -1,0 +1,593 @@
+<?php
+/**
+ * Input tests.
+ *
+ * @package SugarCommerce\Text\Tests
+ */
+
+declare( strict_types=1 );
+
+namespace SugarCommerce\Text\Tests;
+
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use SugarCommerce\Text\Input;
+use SugarCommerce\Text\Text;
+
+/**
+ * Class SanitizeTest
+ */
+final class SanitizeTest extends TestCase {
+
+	public function test_multiline_keeps_line_breaks(): void {
+		$this->assertSame( "one\ntwo", Input::multiline( "one\ntwo" ) );
+	}
+
+	public function test_multiline_normalises_carriage_returns(): void {
+		// The same note typed on Windows and on a Mac has to store the same,
+		// or the length check fires for one of them and not the other.
+		$this->assertSame( "one\ntwo", Input::multiline( "one\r\ntwo" ) );
+		$this->assertSame( "one\ntwo", Input::multiline( "one\rtwo" ) );
+	}
+
+	public function test_multiline_collapses_horizontal_whitespace_only(): void {
+		$this->assertSame( "a b\nc d", Input::multiline( "a   b\nc\t\td" ) );
+	}
+
+	public function test_multiline_collapses_runs_of_blank_lines(): void {
+		$this->assertSame( "a\n\nb", Input::multiline( "a\n\n\n\n\nb" ) );
+	}
+
+	public function test_multiline_drops_trailing_spaces_before_a_break(): void {
+		$this->assertSame( "a\nb", Input::multiline( "a   \nb" ) );
+	}
+
+	public function test_multiline_trims_the_whole_value(): void {
+		$this->assertSame( 'a', Input::multiline( "\n\n  a  \n\n" ) );
+	}
+
+	public function test_multiline_strips_control_characters(): void {
+		$this->assertSame( "ab\ncd", Input::multiline( "a\x00\x07b\ncd" ) );
+	}
+
+	public function test_multiline_strips_bidirectional_overrides(): void {
+		$this->assertSame( 'exe.txt', Input::multiline( "\u{202E}exe.txt" ) );
+	}
+
+	public function test_multiline_limits_lines(): void {
+		$this->assertSame( "a\nb", Input::multiline( "a\nb\nc\nd", 0, 2 ) );
+		$this->assertSame( "a\nb\nc\nd", Input::multiline( "a\nb\nc\nd", 0, 0 ) );
+	}
+
+	public function test_multiline_truncates_by_characters(): void {
+		$this->assertSame( 'ééé', Input::multiline( 'ééééé', 3 ) );
+	}
+
+	public function test_multiline_truncation_leaves_no_trailing_space(): void {
+		$this->assertSame( 'ab', Input::multiline( 'ab cd', 3 ) );
+	}
+
+	public function test_multiline_refuses_anything_that_is_not_scalar(): void {
+		$this->assertSame( '', Input::multiline( array( 'a' ) ) );
+		$this->assertSame( '', Input::multiline( null ) );
+	}
+
+	public function test_clean_text_collapses_whitespace(): void {
+		$this->assertSame( 'a b', Input::text( "  a \n\t b  " ) );
+	}
+
+	public function test_clean_text_strips_control_characters(): void {
+		$this->assertSame( 'ab', Input::text( "a\x00\x07b" ) );
+	}
+
+	public function test_clean_text_strips_bidirectional_overrides(): void {
+		// U+202E is what turns "exe.txt" into something that renders as
+		// "txt.exe" in a file listing.
+		$this->assertSame( 'exe.txt', Input::text( "\u{202E}exe.txt" ) );
+	}
+
+	public function test_clean_text_strips_zero_width_characters(): void {
+		$this->assertSame( 'ab', Input::text( "a\u{200B}b" ) );
+		$this->assertSame( 'ab', Input::text( "\u{FEFF}ab" ) );
+	}
+
+	public function test_clean_text_truncates(): void {
+		$this->assertSame( 'abcde', Input::text( 'abcdefghij', 5 ) );
+		$this->assertSame( 'abcdefghij', Input::text( 'abcdefghij', 0 ) );
+	}
+
+	public function test_clean_text_truncates_by_characters_not_bytes(): void {
+		$this->assertSame( 'ééé', Input::text( 'ééééé', 3 ) );
+	}
+
+
+	public function test_url_accepts_http_and_https(): void {
+		$this->assertSame( 'https://example.com/a', Input::url( 'https://example.com/a' ) );
+		$this->assertSame( 'http://example.com', Input::url( 'http://example.com' ) );
+	}
+
+	public function test_url_rejects_script_bearing_schemes(): void {
+		$this->assertSame( '', Input::url( 'javascript:alert(1)' ) );
+		$this->assertSame( '', Input::url( 'data:text/html,<script>' ) );
+		$this->assertSame( '', Input::url( 'file:///etc/passwd' ) );
+	}
+
+	public function test_url_https_only_refuses_plain_http(): void {
+		$this->assertSame( 'https://cdn.example.com/pack.zip', Input::url( 'https://cdn.example.com/pack.zip', https_only: true ) );
+		$this->assertSame( 'HTTPS://cdn.example.com/pack.zip', Input::url( 'HTTPS://cdn.example.com/pack.zip', https_only: true ) );
+		$this->assertSame( '', Input::url( 'https://cdn.example.com/a b.zip', https_only: true ), 'not a valid URL' );
+		$this->assertSame( '', Input::url( 'http://cdn.example.com/pack.zip', https_only: true ) );
+		$this->assertSame( '', Input::url( 'ftp://cdn.example.com/pack.zip', https_only: true ) );
+		$this->assertSame( 'http://cdn.example.com/pack.zip', Input::url( 'http://cdn.example.com/pack.zip' ) );
+	}
+
+	/**
+	 * The function FreshlyVault used before pasted_code(), verbatim.
+	 */
+	private static function legacy_txid( string $raw ): ?string {
+		$txid = preg_replace( '/^\s*(Transaction\s*ID|Txn\s*ID|Reference|ID)\s*:\s*/i', '', trim( $raw ) ) ?? trim( $raw );
+		$txid = preg_replace( '/^["\'\x{201C}\x{201D}\x{2018}\x{2019}]+|["\'\x{201C}\x{201D}\x{2018}\x{2019}]+$/u', '', $txid ) ?? $txid;
+		$txid = preg_replace( '/[\s\p{Z}]+/u', '', $txid ) ?? $txid;
+		$len  = strlen( $txid );
+
+		return $len < 1 || $len > 64 || 1 !== preg_match( '/^[A-Za-z0-9_\-]+$/', $txid ) ? null : $txid;
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function pasted(): array {
+		return array(
+			'plain'                => array( '9AB12345CD678901E' ),
+			'label'                => array( 'Transaction ID: 9AB12345CD678901E' ),
+			'label no space'       => array( 'TransactionID:9AB12345' ),
+			'txn label'            => array( 'txn id :  9AB12345' ),
+			'reference'            => array( 'Reference: MANUAL-ABC123' ),
+			'id'                   => array( 'ID: 123' ),
+			'curly quotes'         => array( "\u{201C}9AB12345\u{201D}" ),
+			'single quotes'        => array( "'9AB12345'" ),
+			'label then quotes'    => array( "Transaction ID: \u{2018}9AB 123\u{2019}" ),
+			'inner spaces'         => array( '9AB 123 45' ),
+			'nbsp and em space'    => array( "9AB\u{00A0}123\u{2003}45" ),
+			'leading em space'     => array( "\u{2003}9AB12345" ),
+			'newline'              => array( "9AB12345\n" ),
+			'underscore and dash'  => array( 'a_b-c' ),
+			'exactly 64'           => array( str_repeat( 'A', 64 ) ),
+			'65'                   => array( str_repeat( 'A', 65 ) ),
+			'empty'                => array( '' ),
+			'only label'           => array( 'Transaction ID:' ),
+			'only quotes'          => array( '""' ),
+			'slash'                => array( '9AB/123' ),
+			'dot'                  => array( '9AB.123' ),
+			'unicode letters'      => array( 'café123' ),
+			'broken utf-8'         => array( "9AB\xFF123" ),
+			'label in the middle'  => array( '9AB Transaction ID: 123' ),
+			'unknown label'        => array( 'Order: 9AB123' ),
+			'lowercase kept'       => array( 'abcDEF123' ),
+		);
+	}
+
+	#[DataProvider( 'pasted' )]
+	public function test_pasted_code_matches_the_function_it_replaces( string $raw ): void {
+		$this->assertSame(
+			self::legacy_txid( $raw ) ?? '',
+			Input::pasted_code( $raw, 64, array( 'Transaction ID', 'Txn ID', 'Reference', 'ID' ) )
+		);
+	}
+
+	public function test_pasted_code_without_labels_keeps_a_label_out(): void {
+		$this->assertSame( '', Input::pasted_code( 'Transaction ID: 9AB123' ) );
+		$this->assertSame( '9AB123', Input::pasted_code( ' “9AB 123” ' ) );
+	}
+
+	public function test_pasted_code_takes_quotes_from_around_the_label_too(): void {
+		$this->assertSame( '9AB12345', Input::pasted_code( "\u{201C}Transaction ID: 9AB 12345\u{201D}", 64, array( 'Transaction ID' ) ) );
+		$this->assertSame( '9AB12345', Input::pasted_code( '"Txn ID: \'9AB12345\'"', 64, array( 'Txn ID' ) ) );
+		$this->assertSame( '', Input::pasted_code( "\u{201C}Order: 9AB\u{201D}", 64, array( 'Transaction ID' ) ) );
+	}
+
+	public function test_pasted_code_respects_the_maximum(): void {
+		$this->assertSame( 'ABCD', Input::pasted_code( 'AB CD', 4 ) );
+		$this->assertSame( '', Input::pasted_code( 'ABCDE', 4 ) );
+	}
+
+	public function test_pasted_code_refuses_what_is_not_a_string(): void {
+		$this->assertSame( '', Input::pasted_code( array( '9AB' ) ) );
+		$this->assertSame( '', Input::pasted_code( null ) );
+		$this->assertSame( '', Input::pasted_code( 123 ) );
+	}
+
+	public function test_pasted_code_labels_are_literal_text(): void {
+		$this->assertSame( '', Input::pasted_code( 'xx: 9AB', 64, array( '.*' ) ) );
+		$this->assertSame( '9AB', Input::pasted_code( '.*: 9AB', 64, array( '.*' ) ) );
+	}
+
+	public function test_pasted_code_needs_a_positive_maximum(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		Input::pasted_code( 'x', 0 );
+	}
+
+	public function test_prefixed_id_requires_the_prefix(): void {
+		$this->assertSame( 'acct_123abc', Input::prefixed_id( 'acct_123abc', 'acct' ) );
+		$this->assertSame( '', Input::prefixed_id( 'cus_123abc', 'acct' ) );
+		$this->assertSame( '', Input::prefixed_id( 'acct', 'acct' ) );
+	}
+
+	public function test_prefixed_id_rejects_punctuation(): void {
+		$this->assertSame( '', Input::prefixed_id( 'acct_1/../2', 'acct' ) );
+		$this->assertSame( '', Input::prefixed_id( "acct_1'", 'acct' ) );
+	}
+
+	public function test_hex_requires_an_exact_length(): void {
+		$this->assertSame( 'abc123', Input::hex( 'ABC123', 6 ) );
+		$this->assertSame( '', Input::hex( 'abc12', 6 ) );
+		$this->assertSame( '', Input::hex( 'abc123g', 7 ) );
+	}
+
+	public function test_int_clamps_rather_than_rejecting(): void {
+		$this->assertSame( 10, Input::int( 999, 1, 10 ) );
+		$this->assertSame( 1, Input::int( -5, 1, 10 ) );
+		$this->assertSame( 5, Input::int( '5', 1, 10 ) );
+	}
+
+	public function test_int_falls_back_when_not_numeric(): void {
+		$this->assertSame( 3, Input::int( 'abc', 1, 10, 3 ) );
+		$this->assertSame( 3, Input::int( null, 1, 10, 3 ) );
+	}
+
+	public function test_one_of_falls_back_to_the_first_permitted_value(): void {
+		$this->assertSame( 'a', Input::one_of( 'z', array( 'a', 'b' ) ) );
+		$this->assertSame( 'b', Input::one_of( 'b', array( 'a', 'b' ) ) );
+	}
+
+	public function test_one_of_takes_an_explicit_default(): void {
+		$this->assertSame( '', Input::one_of( 'z', array( '', 'a', 'b' ), '' ) );
+	}
+
+	/* ── colours ────────────────────────────────────────────────────── */
+
+	public function test_a_hex_colour_is_lower_cased(): void {
+		$this->assertSame( '#6d28d9', Input::hex_colour( '#6D28D9' ) );
+		$this->assertSame( '#ffffff', Input::hex_colour( '  #FFFFFF  ' ) );
+	}
+
+	/**
+	 * The dangerous input is not `<script>`, which every escaper catches. It
+	 * is `red;background:url(...)`, which survives escaping and is still CSS.
+	 */
+	public function test_anything_that_is_not_six_hex_digits_is_refused(): void {
+		$this->assertSame( '', Input::hex_colour( 'red' ) );
+		$this->assertSame( '', Input::hex_colour( 'red;background:url(//evil)' ) );
+		$this->assertSame( '', Input::hex_colour( '#fff' ) );
+		$this->assertSame( '', Input::hex_colour( '#6d28d9;x' ) );
+		$this->assertSame( '', Input::hex_colour( '' ) );
+	}
+
+	public function test_a_non_scalar_colour_is_refused(): void {
+		$this->assertSame( '', Input::hex_colour( array( '#6d28d9' ) ) );
+		$this->assertSame( '', Input::hex_colour( null ) );
+	}
+
+	/* ── optional integers ──────────────────────────────────────────── */
+
+	/**
+	 * A select whose "unlimited" option has an empty value and a form that
+	 * posts 0 are both saying the same thing.
+	 */
+	public function test_unset_means_null_however_it_arrives(): void {
+		foreach ( array( null, '', 0, '0' ) as $unset ) {
+			$this->assertNull( Input::int_or_null( $unset, 1, 100 ) );
+		}
+	}
+
+	public function test_a_chosen_value_is_clamped(): void {
+		$this->assertSame( 30, Input::int_or_null( 30, 1, 100 ) );
+		$this->assertSame( 100, Input::int_or_null( 999, 1, 100 ) );
+		$this->assertSame( 1, Input::int_or_null( -5, 1, 100 ) );
+	}
+
+	public function test_a_numeric_string_is_accepted(): void {
+		$this->assertSame( 30, Input::int_or_null( '30', 1, 100 ) );
+	}
+
+	public function test_nonsense_is_null_rather_than_the_minimum(): void {
+		// int() would return a default here; the caller of int_or_null needs
+		// to know nothing was chosen.
+		$this->assertNull( Input::int_or_null( 'abc', 1, 100 ) );
+		$this->assertNull( Input::int_or_null( array( 5 ), 1, 100 ) );
+	}
+
+	/* ── non-scalar input generally ─────────────────────────────────── */
+
+	/**
+	 * A caller casting (string) on an array gets "Array" and a warning, and
+	 * "Array" is a value that reaches a database.
+	 */
+	public function test_arrays_do_not_become_the_word_array(): void {
+		$this->assertSame( '', Input::text( array( 'a', 'b' ) ) );
+		$this->assertSame( '', Input::url( array( 'https://a.test' ) ) );
+	}
+
+	public function test_null_is_empty_rather_than_an_error(): void {
+		$this->assertSame( '', Input::text( null ) );
+		$this->assertSame( '', Input::url( null ) );
+	}
+
+	public function test_numbers_still_clean_to_text(): void {
+		$this->assertSame( '42', Input::text( 42 ) );
+	}
+
+	/* ── truncate ───────────────────────────────────────────────────── */
+
+	public function test_truncate_trims_the_ends_only(): void {
+		// Unlike clean_text, the inside is left exactly as written — this is
+		// for HTML and templates, where collapsing whitespace changes them.
+		$this->assertSame( "a\n\n  b", Input::truncate( "  a\n\n  b  " ) );
+	}
+
+	public function test_truncate_counts_characters_not_bytes(): void {
+		$this->assertSame( 'ééé', Input::truncate( 'ééééé', 3 ) );
+	}
+
+	public function test_truncate_with_no_limit_keeps_everything(): void {
+		$this->assertSame( str_repeat( 'a', 500 ), Input::truncate( str_repeat( 'a', 500 ) ) );
+	}
+
+	public function test_truncate_refuses_a_non_scalar(): void {
+		$this->assertSame( '', Input::truncate( array( 'a' ) ) );
+	}
+
+	/* ── prefixed id lists ──────────────────────────────────────────── */
+
+	public function test_prefixed_ids_keeps_valid_ids_in_order_once(): void {
+		$this->assertSame(
+			array( 'price_b', 'price_a' ),
+			Input::prefixed_ids( array( 'price_b', 'prod_x', ' price_a ', 'price_b', '', array( 'x' ) ), 'price' )
+		);
+	}
+
+	public function test_prefixed_ids_reads_no_more_than_the_cap(): void {
+		// The cap is on what is read, so a list padded with junk in front
+		// cannot push a real id past it into being counted.
+		$this->assertSame( array( 'prod_a' ), Input::prefixed_ids( array( 'prod_a', 'nope', 'prod_b' ), 'prod', 2 ) );
+	}
+
+	public function test_prefixed_ids_takes_one_scalar_and_refuses_the_rest(): void {
+		$this->assertSame( array( 'prod_a' ), Input::prefixed_ids( 'prod_a', 'prod' ) );
+		$this->assertSame( array(), Input::prefixed_ids( null, 'prod' ) );
+		$this->assertSame( array(), Input::prefixed_ids( new \stdClass(), 'prod' ) );
+	}
+
+	/* ── switches ───────────────────────────────────────────────────── */
+
+	/**
+	 * Values and what they mean, with a default of false.
+	 *
+	 * @return array<string, array{0: mixed, 1: bool}>
+	 */
+	public static function switches(): array {
+		return array(
+			'true'          => array( true, true ),
+			'one'           => array( 1, true ),
+			'string one'    => array( '1', true ),
+			'string true'   => array( 'true', true ),
+			'on'            => array( 'on', true ),
+			'yes'           => array( 'yes', true ),
+			'false'         => array( false, false ),
+			'string false'  => array( 'false', false ),
+			'zero'          => array( '0', false ),
+			'off'           => array( 'off', false ),
+			'nonsense'      => array( 'maybe', false ),
+			'array'         => array( array( 1 ), false ),
+			'null'          => array( null, false ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'switches' )]
+	public function test_bool_reads_switches_strictly( mixed $value, bool $expected ): void {
+		$this->assertSame( $expected, Input::bool( $value ) );
+	}
+
+	public function test_bool_falls_back_to_the_default_only_for_nonsense(): void {
+		$this->assertTrue( Input::bool( 'maybe', true ) );
+		$this->assertFalse( Input::bool( 'false', true ) );
+	}
+
+	/* ── origins ────────────────────────────────────────────────────── */
+
+	public function test_origin_keeps_scheme_host_and_port_only(): void {
+		$this->assertSame( 'https://shop.example.com', Input::origin( ' https://Shop.Example.com/path?q=1 ' ) );
+		$this->assertSame( 'https://example.com:8443', Input::origin( 'https://example.com:8443/x' ) );
+	}
+
+	public function test_origin_refuses_http_unless_asked(): void {
+		$this->assertSame( '', Input::origin( 'http://example.com' ) );
+		$this->assertSame( 'http://localhost:8080', Input::origin( 'http://localhost:8080/', false ) );
+	}
+
+	public function test_origin_refuses_credentials_odd_hosts_and_other_schemes(): void {
+		$this->assertSame( '', Input::origin( 'https://user@example.com' ) );
+		$this->assertSame( '', Input::origin( 'https://exa mple.com' ) );
+		$this->assertSame( '', Input::origin( 'javascript:alert(1)' ) );
+		$this->assertSame( '', Input::origin( 'example.com' ) );
+		$this->assertSame( '', Input::origin( array( 'https://example.com' ) ) );
+	}
+
+	/* ── lists ──────────────────────────────────────────────────────── */
+
+	public function test_list_splits_on_commas_spaces_and_lines(): void {
+		$this->assertSame( array( 'a', 'b', 'c', 'd' ), Input::list( "a, b\nc ,,d  a" ) );
+	}
+
+	public function test_list_takes_an_array_and_drops_what_is_not_text(): void {
+		$this->assertSame( array( 'a', 'b' ), Input::list( array( ' a ', '', array( 'x' ), 'b', 'a' ) ) );
+	}
+
+	public function test_list_reads_no_more_than_the_cap(): void {
+		$this->assertSame( array( 'a', 'b' ), Input::list( 'a,b,c', 2 ) );
+		$this->assertSame( array(), Input::list( null ) );
+	}
+
+	/* ── masks ──────────────────────────────────────────────────────── */
+
+	public function test_mask_shows_both_ends_of_a_long_value(): void {
+		$this->assertSame( 'KEYA…WXYZ', Text::redact( 'KEYA0123456789WXYZ' ) );
+		$this->assertSame( 'med…ia', Text::redact( 'media-bucket-ia' ) );
+	}
+
+	public function test_mask_shows_one_character_of_a_short_value(): void {
+		$this->assertSame( 'a…', Text::redact( 'abcdef' ) );
+		$this->assertSame( '…', Text::redact( '' ) );
+	}
+
+	/* ── number lists ───────────────────────────────────────────────── */
+
+	public function test_number_list_clamps_and_rounds(): void {
+		$this->assertSame( array( 0.0, 0.33, 1.0 ), Input::number_list( array( -1, 0.3333, 7 ), 0.0, 1.0, 0, 2 ) );
+	}
+
+	public function test_number_list_is_all_or_nothing(): void {
+		$this->assertNull( Input::number_list( array( 0.1, '0.2' ), 0.0, 1.0 ) );
+		$this->assertNull( Input::number_list( array(), 0.0, 1.0 ) );
+		$this->assertNull( Input::number_list( array( 'a' => 0.1 ), 0.0, 1.0 ) );
+		$this->assertNull( Input::number_list( '0.1,0.2', 0.0, 1.0 ) );
+	}
+
+	public function test_number_list_refuses_more_than_the_cap(): void {
+		$this->assertNull( Input::number_list( array( 0.1, 0.2, 0.3 ), 0.0, 1.0, 2 ) );
+		$this->assertSame( array( 0.1, 0.2 ), Input::number_list( array( 0.1, 0.2 ), 0.0, 1.0, 2 ) );
+	}
+
+	/* ── found in review ─────────────────────────────────────────────── */
+
+	/**
+	 * The bidirectional isolates are what "Trojan Source" used, and the
+	 * docblock always promised C1 as well as C0.
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public static function invisible(): array {
+		return array(
+			'right-to-left isolate'    => array( "\u{2067}" ),
+			'first-strong isolate'     => array( "\u{2068}" ),
+			'pop directional isolate'  => array( "\u{2069}" ),
+			'left-to-right isolate'    => array( "\u{2066}" ),
+			'Arabic letter mark'       => array( "\u{061C}" ),
+			'soft hyphen'              => array( "\u{00AD}" ),
+			'Mongolian vowel separator' => array( "\u{180E}" ),
+			'Hangul filler'            => array( "\u{3164}" ),
+			'a tag character'          => array( "\u{E0041}" ),
+			'C1 next line'             => array( "\u{0085}" ),
+			'C1 control'               => array( "\u{009B}" ),
+		);
+	}
+
+	#[DataProvider( 'invisible' )]
+	public function test_clean_text_strips_every_invisible_character( string $character ): void {
+		$this->assertSame( 'exe.txt', Input::text( "exe{$character}.txt" ) );
+		$this->assertSame( 'exe.txt', Input::multiline( "exe{$character}.txt" ) );
+	}
+
+	/**
+	 * The first 254 characters of a longer string are a different address.
+	 */
+	public function test_a_url_too_long_is_refused_rather_than_cut(): void {
+		$this->assertSame( '', Input::url( 'https://example.com/' . str_repeat( 'a', 2100 ) ) );
+	}
+
+	/**
+	 * A float past PHP_INT_MAX cast to 0 with a warning, which int_or_null()
+	 * read as "nothing chosen" — no limit at all.
+	 */
+	public function test_a_number_too_big_for_an_int_clamps_to_the_maximum(): void {
+		$this->assertSame( 10, Input::int( 1e30, 1, 10 ) );
+		$this->assertSame( 10, Input::int( '1e30', 1, 10 ) );
+		$this->assertSame( 1, Input::int( -1e30, 1, 10 ) );
+		$this->assertSame( 100, Input::int_or_null( 1e30, 1, 100 ) );
+		$this->assertSame( 3, Input::int( NAN, 1, 10, 3 ) );
+	}
+
+	#[DataProvider( 'whole_numbers' )]
+	public function test_one_of_int( mixed $value, int $expected ): void {
+		$this->assertSame( $expected, Input::one_of_int( $value, array( 7, 30, 90, -1 ), 30 ) );
+	}
+
+	/** @return array<string, array{0: mixed, 1: int}> */
+	public static function whole_numbers(): array {
+		return array(
+			'an int'               => array( 90, 90 ),
+			'digits'               => array( '7', 7 ),
+			'digits, padded'       => array( ' 90 ', 90 ),
+			'leading zeros'        => array( '007', 7 ),
+			'negative'             => array( '-1', -1 ),
+			'not permitted'        => array( 14, 30 ),
+			'digits not permitted' => array( '14', 30 ),
+			'a fraction'           => array( '7.9', 30 ),
+			'a float'              => array( 7.0, 30 ),
+			'an exponent'          => array( '9e1', 30 ),
+			'a plus sign'          => array( '+7', 30 ),
+			'hex'                  => array( '0x7', 30 ),
+			'trailing junk'        => array( '7d', 30 ),
+			'too big for an int'   => array( '99999999999999999999999', 30 ),
+			'true'                 => array( true, 30 ),
+			'null'                 => array( null, 30 ),
+			'empty'                => array( '', 30 ),
+			'an array'             => array( array( 7 ), 30 ),
+		);
+	}
+
+	public function test_one_of_int_falls_back_to_the_first_permitted_value(): void {
+		$this->assertSame( 7, Input::one_of_int( 'x', array( 7, 30 ) ) );
+		$this->assertSame( 30, Input::one_of_int( 'x', array( 3 => 30, 0 => 7 ) ) );
+		$this->assertSame( 0, Input::one_of_int( 7, array() ) );
+		$this->assertSame( 0, Input::one_of_int( '0', array( 5, 0 ) ) );
+	}
+
+	public function test_one_of_with_nothing_permitted_is_empty(): void {
+		$this->assertSame( '', Input::one_of( 'a', array() ) );
+		$this->assertSame( 'b', Input::one_of( 'z', array( 2 => 'b' ) ) );
+	}
+
+	public function test_hex_of_a_length_below_one_is_empty(): void {
+		$this->assertSame( '', Input::hex( '', 0 ) );
+		$this->assertSame( '', Input::hex( 'ab', -1 ) );
+	}
+
+	/**
+	 * Five of seven characters is most of a secret.
+	 */
+	public function test_mask_shows_one_character_below_ten(): void {
+		$this->assertSame( 's…', Text::redact( 'secret1' ) );
+		$this->assertSame( 'sec…90', Text::redact( 'secret7890' ) );
+	}
+
+	public function test_mask_never_cuts_a_character_in_half(): void {
+		$masked = Text::redact( 'ééééééééééé' );
+
+		$this->assertSame( 'ééé…éé', $masked );
+		$this->assertTrue( mb_check_encoding( $masked, 'UTF-8' ) );
+	}
+
+	public function test_number_list_refuses_nan(): void {
+		$this->assertNull( Input::number_list( array( 0.5, NAN ), 0, 1 ) );
+	}
+
+	/* ─── lines (1.7.0) ─────────────────────────────────────────────── */
+
+	public function test_lines_keeps_spaces_commas_duplicates_and_order(): void {
+		$this->assertSame(
+			array( 'Sample Packs/Foo, Vol 2.zip', 'https://cdn.example.com/a.zip', 'Sample Packs/Foo, Vol 2.zip', '0' ),
+			Input::lines( "  Sample Packs/Foo, Vol 2.zip \r\n\r\nhttps://cdn.example.com/a.zip\rSample Packs/Foo, Vol 2.zip\n\t\n0\n" )
+		);
+	}
+
+	public function test_lines_stops_at_the_maximum(): void {
+		$this->assertSame( array( 'a', 'b' ), Input::lines( "a\n\nb\nc", 2 ) );
+	}
+
+	public function test_lines_of_anything_but_a_string_is_empty(): void {
+		$this->assertSame( array(), Input::lines( array( 'a' ) ) );
+		$this->assertSame( array(), Input::lines( null ) );
+		$this->assertSame( array(), Input::lines( "\n \r\n" ) );
+	}
+}
