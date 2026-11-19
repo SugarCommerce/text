@@ -128,7 +128,9 @@ final readonly class Bytes {
 	public static function format_localized( int $bytes, string $locale, bool $decimal = false ): string {
 		$size = self::format( $bytes, $decimal );
 
-		if ( '' === $locale || str_starts_with( strtolower( $locale ), 'en' ) || ! class_exists( \NumberFormatter::class ) ) {
+		$tag = Numbers::intl_locale( $locale );
+
+		if ( null === $tag ) {
 			return $size;
 		}
 
@@ -137,7 +139,7 @@ final readonly class Bytes {
 		$plain     = str_replace( ',', '', $number );
 		$digits    = str_contains( $plain, '.' ) ? 1 : 0;
 		try {
-			$formatter = new \NumberFormatter( str_replace( '-', '_', $locale ), \NumberFormatter::DECIMAL );
+			$formatter = new \NumberFormatter( $tag, \NumberFormatter::DECIMAL );
 		} catch ( \ValueError | \IntlException ) {
 			return $size;
 		}

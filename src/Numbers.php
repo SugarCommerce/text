@@ -178,12 +178,14 @@ final readonly class Numbers {
 	 * @return \NumberFormatter|null
 	 */
 	private static function formatter( string $locale, int $style, int $min, int $max ): ?\NumberFormatter {
-		if ( '' === $locale || str_starts_with( strtolower( $locale ), 'en' ) || ! class_exists( \NumberFormatter::class ) ) {
+		$tag = self::intl_locale( $locale );
+
+		if ( null === $tag ) {
 			return null;
 		}
 
 		try {
-			$formatter = new \NumberFormatter( str_replace( '-', '_', $locale ), $style );
+			$formatter = new \NumberFormatter( $tag, $style );
 		} catch ( \ValueError | \IntlException ) {
 			return null;
 		}
@@ -193,6 +195,44 @@ final readonly class Numbers {
 		$formatter->setAttribute( \NumberFormatter::ROUNDING_MODE, \NumberFormatter::ROUND_HALFUP );
 
 		return $formatter;
+	}
+
+	/**
+	 * The tag to hand intl, or null where the plain English output stands:
+	 * English itself, no intl, or a tag whose language intl does not know.
+	 *
+	 * PHP 8.4 and later refuse such a tag in the NumberFormatter
+	 * constructor. PHP 8.3 takes it and formats in the root locale -- `5000`,
+	 * with no grouping -- so the language is checked here, the same way on
+	 * every version.
+	 *
+	 * @internal Shared with Bytes::format_localized().
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param string $locale Language tag.
+	 *
+	 * @return string|null
+	 */
+	public static function intl_locale( string $locale ): ?string {
+		if ( '' === $locale || str_starts_with( strtolower( $locale ), 'en' ) || ! class_exists( \NumberFormatter::class ) ) {
+			return null;
+		}
+
+		$tag = str_replace( '-', '_', $locale );
+
+		try {
+			$language = (string) \Locale::getPrimaryLanguage( $tag );
+		} catch ( \ValueError ) {
+			return null;
+		}
+
+		// intl names every language it knows, and echoes back one it does not.
+		if ( '' === $language || 'und' === $language || 'root' === $language || \Locale::getDisplayLanguage( $language, 'en' ) === $language ) {
+			return null;
+		}
+
+		return $tag;
 	}
 
 	/**
