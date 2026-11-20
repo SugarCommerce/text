@@ -42,3 +42,31 @@ if ( ! function_exists( 'number_format_i18n' ) ) {
 }
 
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
+
+if ( ! class_exists( 'WP_Error' ) ) {
+	/**
+	 * Core's error object, near enough, for CsvReader.
+	 */
+	class WP_Error {
+
+		/**
+		 * @param string $code    Code.
+		 * @param string $message Message.
+		 */
+		public function __construct( public string $code = '', public string $message = '' ) {}
+
+		/**
+		 * @return string
+		 */
+		public function get_error_code(): string {
+			return $this->code;
+		}
+
+		/**
+		 * @return string
+		 */
+		public function get_error_message(): string {
+			return $this->message;
+		}
+	}
+}

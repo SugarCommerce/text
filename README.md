@@ -18,7 +18,7 @@ why they get rewritten per screen and drift apart. This is one copy of each.
 - Format bytes and durations, and parse `512M` and `2h 5m` back
 - Give an incoming value its shape: a capped line of text with nothing invisible in it, a clamped number, a strict switch, one of an allowed set, a URL, a pasted order number
 - Find "licence" in "License Agreement.pdf": every word typed, any order, one typo forgiven, accents ignored
-- Page a list and draw its controls, and write CSV a spreadsheet will not run as formulas
+- Page a list and draw its controls, write CSV a spreadsheet will not run as formulas, and read a big one in batches
 
 ## Installation
 
@@ -239,6 +239,24 @@ try {
 }
 ```
 
+A file too big to read in one request is read a batch at a time with
+`CsvReader`, which remembers the byte each batch ended at so the next one
+seeks straight there (a hundred-thousand-row file is read once, not once per
+batch). It drops Excel's byte order mark from the first header, refuses a
+file with two columns of one name or no header row (a `WP_Error`), skips
+blank lines, and keys every row by header -- a short row padded, a long one
+trimmed, both listed as `malformed`:
+
+```php
+use SugarCommerce\Text\CsvReader;
+
+$reader = new CsvReader( $path, ';' );           // separator and enclosure optional
+$reader->headers();                              // [ 'sku', 'name' ] or a WP_Error
+$reader->count();                                // rows, read rather than newlines counted
+$batch  = $reader->batch( 200, 100 );            // { rows, malformed, offset, count, has_more }
+CsvReader::forget( $path );                      // when the file is deleted
+```
+
 ## Yes and no
 
 ```php
@@ -293,7 +311,7 @@ Color::readable( $text, $background );    // WCAG AA: 4.5, or 3 with large: true
 ## Layout
 
 * `src/`: one class a job, all static (`Text`, `Strings`, `Numbers`, `Bytes`,
-  `Duration`, `FileType`, `Input`, `Search`, `Csv`, `Booleans`); `Text` and
+  `Duration`, `FileType`, `Input`, `Search`, `Csv`, `CsvReader`, `Booleans`); `Text` and
   `Input` keep one trait per job in `src/Traits/<Class>/`.
 * `src/Display/`: pictures drawn from data, `Avatar`, `Color`, `Palette` and
   `Sparkline`.
