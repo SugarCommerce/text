@@ -41,6 +41,51 @@ if ( ! function_exists( 'number_format_i18n' ) ) {
 	}
 }
 
+/*
+ * Core's form-field sanitisers, near enough, for Input's Fields trait: what
+ * the trait adds on top -- a non-scalar is '', the cut counts characters --
+ * is what its tests check. SugarCart's integration suite checks the same
+ * calls against WordPress itself.
+ */
+if ( ! function_exists( 'sanitize_text_field' ) ) {
+	/**
+	 * Tags out, every run of whitespace one space, trimmed.
+	 *
+	 * @param string $text Text.
+	 *
+	 * @return string
+	 */
+	function sanitize_text_field( $text ): string {
+		return trim( (string) preg_replace( '/[\r\n\t ]+/', ' ', strip_tags( (string) $text ) ) );
+	}
+}
+
+if ( ! function_exists( 'sanitize_textarea_field' ) ) {
+	/**
+	 * Tags out, line breaks kept, trimmed.
+	 *
+	 * @param string $text Text.
+	 *
+	 * @return string
+	 */
+	function sanitize_textarea_field( $text ): string {
+		return trim( (string) preg_replace( '/[\t ]+/', ' ', strip_tags( (string) $text ) ) );
+	}
+}
+
+if ( ! function_exists( 'wp_kses_post' ) ) {
+	/**
+	 * A few tags kept, the rest out.
+	 *
+	 * @param string $text Markup.
+	 *
+	 * @return string
+	 */
+	function wp_kses_post( $text ): string {
+		return strip_tags( (string) $text, '<p><strong><em><a>' );
+	}
+}
+
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
 if ( ! class_exists( 'WP_Error' ) ) {

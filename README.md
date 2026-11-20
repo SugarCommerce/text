@@ -163,6 +163,7 @@ Input::truncate( $html, 20000 );                // trimmed and capped, inside un
 Input::key( $status );                          // sanitize_key() without WordPress
 Input::digits( '+44 (0)20 7946' );              // "440207946"
 Input::bool( $setting );                        // strict: "false" is false, "maybe" the default
+Input::flag( $setting );                        // the same switch as the 1 or 0 a tinyint(1) column keeps
 Input::int( $page, 1, 500, 1 );                 // clamped; 1e30 is 500, not a wrapped number
 Input::int_or_null( $expiry_days, 1, 3650 );    // null for unset, 0 or ''
 Input::limit( $_GET['per_page'] ?? null );      // 1 to 100, 30 by default
@@ -181,6 +182,15 @@ Input::number_list( $peaks, 0.0, 1.0, 4000, 2 );// clamped floats, or null
 
 What is safe to print is WordPress's business (`esc_html()`, `wp_kses_post()`); this is about shape. An email address
 is `sugarcommerce/network`'s.
+
+Three go through WordPress's own form-field functions and then keep to a column's length, counting characters -- the
+shape a value is given on its way into a database row (they need WordPress loaded):
+
+```php
+Input::text_field( $title, 255 );    // sanitize_text_field(), trimmed, 255 characters at most
+Input::textarea_field( $note, 0 );   // sanitize_textarea_field(): the line breaks kept
+Input::html( $message );             // wp_kses_post(): the markup a post may carry
+```
 
 ## Search
 

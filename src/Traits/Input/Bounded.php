@@ -51,6 +51,23 @@ trait Bounded {
 	}
 
 	/**
+	 * A switch as the one or nought a flag column keeps.
+	 *
+	 * Read as {@see self::bool()} reads it, so anything that is not a yes
+	 * -- "no", "false", "banana", an array -- is 0. A tinyint(1) column
+	 * written with a bare `(int) (bool)` stores 1 for "false".
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param mixed $value Stored or submitted value.
+	 *
+	 * @return int 1 or 0.
+	 */
+	public static function flag( mixed $value ): int {
+		return self::bool( $value ) ? 1 : 0;
+	}
+
+	/**
 	 * A whole number within bounds.
 	 *
 	 * Clamped rather than rejected: a page number of ten million is

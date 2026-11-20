@@ -16,6 +16,7 @@ use SugarCommerce\Text\Traits\Input\Bounded;
 use SugarCommerce\Text\Traits\Input\Choices;
 use SugarCommerce\Text\Traits\Input\Cleaned;
 use SugarCommerce\Text\Traits\Input\Codes;
+use SugarCommerce\Text\Traits\Input\Fields;
 use SugarCommerce\Text\Traits\Input\Lists;
 use SugarCommerce\Text\Traits\Input\Urls;
 
@@ -36,8 +37,10 @@ use SugarCommerce\Text\Traits\Input\Urls;
  * with a prefix; one of an allowed set; a list typed into a field. An email
  * address is `sugarcommerce/network`'s, a colour {@see Display\Color::hex()}.
  *
- * Plain PHP. What is safe to print is WordPress's business
- * (`sanitize_text_field()`, `wp_kses_post()`); this is about shape.
+ * Plain PHP, about shape -- except the three that put a value through
+ * the WordPress function a form field goes through and keep it to a
+ * column's length ({@see Traits\Input\Fields}: text_field(),
+ * textarea_field(), html()), which need WordPress loaded.
  *
  * @since 1.0.0
  */
@@ -47,6 +50,7 @@ final readonly class Input {
 	use Bounded;
 	use Choices;
 	use Codes;
+	use Fields;
 	use Urls;
 	use Lists;
 }
