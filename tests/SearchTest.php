@@ -153,6 +153,54 @@ final class SearchTest extends TestCase {
 	}
 
 	/**
+	 * Every word of a query is tried against every word of every row, so
+	 * a pasted query of thousands -- the same one repeated, or a different
+	 * misspelling each time -- multiplied the work by thousands.
+	 */
+	public function test_a_query_of_thousands_of_words_is_quick(): void {
+		$rows = array_fill( 0, 200, array( 'name' => 'Midnight Trance Essentials Volume One' ) );
+		$from = microtime( true );
+
+		$this->assertCount( 200, Search::filter( $rows, str_repeat( 'midnigth ', 20000 ) ) );
+		$this->assertCount( 200, Search::filter( $rows, implode( ' ', self::misspellings( 'midnight', 20000 ) ) ) );
+		$this->assertLessThan( 1.0, microtime( true ) - $from );
+	}
+
+	/**
+	 * A word said twice is asked once, and past MAX_TERMS different words
+	 * the rest are not asked: nobody types that many into a search.
+	 */
+	public function test_only_the_first_words_of_a_long_query_decide(): void {
+		$name   = 'Midnight Drive - Master.wav';
+		$enough = self::misspellings( 'midnight', Search::MAX_TERMS );
+
+		$this->assertFalse( Search::matches( $name, str_repeat( 'midnight ', 100 ) . 'neon' ) );
+		$this->assertFalse( Search::matches( $name, implode( ' ', array_slice( $enough, 0, -1 ) ) . ' neon' ) );
+		$this->assertTrue( Search::matches( $name, implode( ' ', $enough ) . ' neon' ) );
+		$this->assertTrue( Search::matches( $name, array_merge( $enough, array( 'neon' ) ) ) );
+	}
+
+	/**
+	 * Different words, each one letter changed from a word: a letter from
+	 * the CJK block, so there are thousands of them.
+	 *
+	 * @param string $word  The word, in ASCII.
+	 * @param int    $count How many.
+	 *
+	 * @return list<string>
+	 */
+	private static function misspellings( string $word, int $count ): array {
+		$words = array();
+
+		for ( $i = 0; $i < $count; $i++ ) {
+			$at      = $i % strlen( $word );
+			$words[] = substr( $word, 0, $at ) . mb_chr( 0x4E00 + intdiv( $i, strlen( $word ) ) ) . substr( $word, $at + 1 );
+		}
+
+		return $words;
+	}
+
+	/**
 	 * The quick one-edit test agrees with distance() for every pair of
 	 * short words over a small alphabet, where every kind of edit occurs.
 	 */

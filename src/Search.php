@@ -38,6 +38,16 @@ final readonly class Search {
 	public const int FUZZY_FROM = 4;
 
 	/**
+	 * Most different words of a query that are looked for.
+	 *
+	 * Every word is tried against every word of every row, so a query
+	 * pasted in with thousands of words -- each a different misspelling,
+	 * or the same one again -- multiplied the work by thousands. Nobody
+	 * types more than this into a search box; the first ones decide.
+	 */
+	public const int MAX_TERMS = 16;
+
+	/**
 	 * The rows whose name matches, in the order given.
 	 *
 	 * @since 1.0.0
@@ -50,7 +60,7 @@ final readonly class Search {
 	 *                                          when nothing searchable was typed.
 	 */
 	public static function filter( array $rows, string $query, string $field = 'name' ): array {
-		$terms = self::words( $query );
+		$terms = self::terms( $query );
 
 		if ( ! $terms ) {
 			return array_values( $rows );
@@ -71,8 +81,9 @@ final readonly class Search {
 	 * "licence" before the typing is finished.
 	 *
 	 * Linear in the lengths of the name and the query: the one-edit test
-	 * never builds distance()'s table, so a query pasted in at any length
-	 * costs what reading it costs.
+	 * never builds distance()'s table, and a word said twice is looked for
+	 * once and only the first MAX_TERMS different words are, so a query
+	 * pasted in at any length costs what reading it costs.
 	 *
 	 * @since 1.0.0
 	 *
@@ -83,7 +94,7 @@ final readonly class Search {
 	 * @return bool True for an empty query.
 	 */
 	public static function matches( string $name, string|array $query ): bool {
-		$terms  = is_string( $query ) ? self::words( $query ) : $query;
+		$terms  = self::terms( $query );
 		$folded = self::fold( $name );
 		$words  = self::words( $name );
 
@@ -176,6 +187,20 @@ final readonly class Search {
 		}
 
 		return $text;
+	}
+
+	/**
+	 * The different words of a query, the first MAX_TERMS of them.
+	 *
+	 * @param string|array<int, string> $query What was typed, or its words()
+	 *                                         already split.
+	 *
+	 * @return list<string>
+	 */
+	private static function terms( string|array $query ): array {
+		$terms = is_string( $query ) ? self::words( $query ) : $query;
+
+		return array_slice( array_values( array_unique( $terms ) ), 0, self::MAX_TERMS );
 	}
 
 	/**
