@@ -198,7 +198,7 @@ out; accents are ignored where intl is installed. In PHP rather than SQL because
 ## Pagination
 
 ```php
-use SugarCommerce\Text\Pagination;
+use SugarCommerce\Text\Models\Pagination;
 
 $page = Pagination::of( $total, $_GET, 50 );   // reads ?page=, clamps it to the pages there are
 $rows = $wpdb->get_results( $wpdb->prepare( "SELECT … LIMIT 50 OFFSET %d", $page->offset() ) );
@@ -289,6 +289,16 @@ Color::is_light( $brand );                // true when that is black
 Color::ratio( '#d0ecfb', '#0d5e8c' );     // 5.7 -- null when either is not a colour
 Color::readable( $text, $background );    // WCAG AA: 4.5, or 3 with large: true
 ```
+
+## Layout
+
+* `src/`: one class a job, all static (`Text`, `Strings`, `Numbers`, `Bytes`,
+  `Duration`, `FileType`, `Input`, `Search`, `Csv`, `Booleans`); `Text` and
+  `Input` keep one trait per job in `src/Traits/<Class>/`.
+* `src/Display/`: pictures drawn from data, `Avatar`, `Color`, `Palette` and
+  `Sparkline`.
+* `src/Models/`: data shapes. `Pagination.php` is the result of a paged query,
+  with everything a view needs to draw its controls.
 
 ## Security
 

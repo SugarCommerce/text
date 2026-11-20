@@ -13,7 +13,7 @@ namespace SugarCommerce\Text\Tests;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use SugarCommerce\Text\Input;
-use SugarCommerce\Text\Pagination;
+use SugarCommerce\Text\Models\Pagination;
 use SugarCommerce\Text\Strings;
 use SugarCommerce\Text\Text;
 

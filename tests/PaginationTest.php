@@ -11,7 +11,7 @@ namespace SugarCommerce\Text\Tests;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use SugarCommerce\Text\Pagination;
+use SugarCommerce\Text\Models\Pagination;
 
 /**
  * Class PaginationTest

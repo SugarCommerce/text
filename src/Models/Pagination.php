@@ -10,7 +10,7 @@
 
 declare( strict_types=1 );
 
-namespace SugarCommerce\Text;
+namespace SugarCommerce\Text\Models;
 
 /**
  * Class Pagination
