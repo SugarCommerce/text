@@ -31,7 +31,7 @@ namespace SugarCommerce\Text;
  *
  * @since 1.0.0
  */
-final class Strings {
+final readonly class Strings {
 
 	/**
 	 * Whether a string contains any of the needles.

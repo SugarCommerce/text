@@ -34,7 +34,7 @@ namespace SugarCommerce\Text;
  *
  * @since 1.0.0
  */
-final class Csv {
+final readonly class Csv {
 
 	/**
 	 * Characters that make a spreadsheet read a cell as a formula.
@@ -46,13 +46,13 @@ final class Csv {
 	 *
 	 * @var list<string>
 	 */
-	public const TRIGGERS = array( '=', '+', '-', '@', '|', "\t", "\r" );
+	public const array TRIGGERS = array( '=', '+', '-', '@', '|', "\t", "\r" );
 
 	/**
 	 * Whitespace an importer may strip before it looks for a formula; what
 	 * follows it is checked too.
 	 */
-	private const LEADING = " \t\r\n";
+	private const string LEADING = " \t\r\n";
 
 	/**
 	 * Characters that put a cell in quotes.
@@ -62,14 +62,14 @@ final class Csv {
 	 * splits a .csv on semicolons. Unquoted, `Jo;=HYPERLINK(…)` is one cell
 	 * here and two there, and the second starts with `=`.
 	 */
-	private const QUOTED = '/[,";\r\n\t ]/';
+	private const string QUOTED = '/[,";\r\n\t ]/';
 
 	/**
 	 * The UTF-8 byte-order mark.
 	 *
 	 * @since 1.0.0
 	 */
-	public const BOM = "\xEF\xBB\xBF";
+	public const string BOM = "\xEF\xBB\xBF";
 
 	/**
 	 * A whole file: header row, then the rows.

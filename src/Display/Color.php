@@ -32,7 +32,7 @@ namespace SugarCommerce\Text\Display;
  *
  * @since 1.0.0
  */
-final class Color {
+final readonly class Color {
 
 	/**
 	 * A colour as the one form to store and print: `#rrggbb`, lowercase.

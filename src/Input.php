@@ -41,7 +41,7 @@ use SugarCommerce\Text\Traits\Input\Urls;
  *
  * @since 1.0.0
  */
-final class Input {
+final readonly class Input {
 
 	use Cleaned;
 	use Bounded;

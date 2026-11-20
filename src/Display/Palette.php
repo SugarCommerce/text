@@ -32,7 +32,7 @@ namespace SugarCommerce\Text\Display;
  *
  * @since 1.0.0
  */
-final class Palette {
+final readonly class Palette {
 
 	/**
 	 * The colour of nobody: a grey pair, no hue.
@@ -41,7 +41,7 @@ final class Palette {
 	 *
 	 * @since 1.0.0
 	 */
-	public const NEUTRAL = array(
+	public const array NEUTRAL = array(
 		'name'  => '',
 		'tint'  => '#e9eaee',
 		'shade' => '#5d6470',

@@ -37,14 +37,14 @@ namespace SugarCommerce\Text\Display;
  *
  * @since 1.0.0
  */
-final class Sparkline {
+final readonly class Sparkline {
 
 	/**
 	 * What a drawing is unless told otherwise.
 	 *
 	 * @since 1.0.0
 	 */
-	private const DEFAULTS = array(
+	private const array DEFAULTS = array(
 		'width'          => 64,
 		'height'         => 18,
 		'padding'        => 0,

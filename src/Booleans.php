@@ -24,7 +24,7 @@ namespace SugarCommerce\Text;
  *
  * @since 1.0.0
  */
-final class Booleans {
+final readonly class Booleans {
 
 	/**
 	 * Yes or no.

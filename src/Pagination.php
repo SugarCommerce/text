@@ -40,7 +40,7 @@ final readonly class Pagination {
 	 *
 	 * @var list<int>
 	 */
-	public const SIZES = array( 25, 50, 100, 200 );
+	public const array SIZES = array( 25, 50, 100, 200 );
 
 	/**
 	 * Hold one page and the state its controls are drawn from.

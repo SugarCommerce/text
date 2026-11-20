@@ -35,7 +35,7 @@ final readonly class FileType {
 	 *
 	 * @var array<string, list<string>>
 	 */
-	private const KINDS = array(
+	private const array KINDS = array(
 		'image'    => array( 'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp', 'ico', 'heic', 'tiff', 'tif', 'psd', 'ai', 'eps' ),
 		'video'    => array( 'mp4', 'mov', 'webm', 'mkv', 'avi', 'm4v', 'mpg', 'mpeg', 'wmv', 'flv' ),
 		'audio'    => array( 'mp3', 'wav', 'flac', 'aac', 'ogg', 'oga', 'm4a', 'aiff', 'aif', 'wma', 'opus', 'alac', 'mid', 'midi' ),
@@ -53,7 +53,7 @@ final readonly class FileType {
 	 *
 	 * @var array<string, string>
 	 */
-	private const MIME = array(
+	private const array MIME = array(
 		// Images.
 		'png'  => 'image/png',
 		'jpg'  => 'image/jpeg',
@@ -140,7 +140,7 @@ final readonly class FileType {
 	 *
 	 * @var list<string>
 	 */
-	private const INLINE = array(
+	private const array INLINE = array(
 		'png',
 		'jpg',
 		'jpeg',
@@ -167,14 +167,14 @@ final readonly class FileType {
 	 * and isolates that make a name display in an order other than the one
 	 * it has. Bytes, not code points, so invalid UTF-8 is still cleaned.
 	 */
-	private const INVISIBLE = '/[\x00-\x1F\x7F]|\xE2\x80[\x8E\x8F\xAA-\xAE]|\xE2\x81[\xA6-\xA9]|\xD8\x9C/';
+	private const string INVISIBLE = '/[\x00-\x1F\x7F]|\xE2\x80[\x8E\x8F\xAA-\xAE]|\xE2\x81[\xA6-\xA9]|\xD8\x9C/';
 
 	/**
 	 * Human labels per kind.
 	 *
 	 * @var array<string, string>
 	 */
-	private const LABELS = array(
+	private const array LABELS = array(
 		'image'    => 'Image',
 		'video'    => 'Video',
 		'audio'    => 'Audio',

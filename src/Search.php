@@ -35,7 +35,7 @@ final readonly class Search {
 	 * Shortest word allowed a typo. Below this one wrong letter is a
 	 * different word: "mix" and "max", "wav" and "way".
 	 */
-	public const FUZZY_FROM = 4;
+	public const int FUZZY_FROM = 4;
 
 	/**
 	 * The rows whose name matches, in the order given.

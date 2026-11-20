@@ -333,10 +333,10 @@ final readonly class Numbers {
 	 *
 	 * @since 1.0.0
 	 */
-	public const TREND_UP    = 'up';
-	public const TREND_DOWN  = 'down';
-	public const TREND_LEVEL = 'level';
-	public const TREND_NEW   = 'new';
+	public const string TREND_UP    = 'up';
+	public const string TREND_DOWN  = 'down';
+	public const string TREND_LEVEL = 'level';
+	public const string TREND_NEW   = 'new';
 
 	/**
 	 * Which way a figure went between two periods.
