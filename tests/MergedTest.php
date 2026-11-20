@@ -52,6 +52,65 @@ final class MergedTest extends TestCase {
 		$this->assertSame( 'Hello there', Text::strip_tags( '<p>Hello <script>alert(1)</script>there</p><style>p{}</style>' ) );
 	}
 
+	/**
+	 * The one pattern for this, `<(script|style)[^>]*?>.*?</\1>`, looks for
+	 * the closing tag again from every opening one: a few hundred kilobytes
+	 * of `<script>` with no `</script>` took seconds, and without PCRE's JIT
+	 * ran out of backtracking and came back as nothing at all.
+	 */
+	public function test_unclosed_scripts_cost_what_reading_them_costs(): void {
+		$jit   = ini_get( 'pcre.jit' );
+		$limit = ini_get( 'pcre.backtrack_limit' );
+
+		ini_set( 'pcre.jit', '0' );
+		ini_set( 'pcre.backtrack_limit', '1000000' );
+
+		try {
+			$never = str_repeat( 'a<style', 50000 );
+			$from  = microtime( true );
+
+			$this->assertSame( 'kept', Text::strip_tags( str_repeat( '<script>', 50000 ) . 'kept' ) );
+			$this->assertSame( strip_tags( $never ), Text::strip_tags( $never ) );
+			$this->assertSame( 'kept', Text::excerpt( str_repeat( '<STYLE x>', 50000 ) . 'kept', 10, strip_tags: true ) );
+			$this->assertLessThan( 1.0, microtime( true ) - $from );
+		} finally {
+			ini_set( 'pcre.jit', (string) $jit );
+			ini_set( 'pcre.backtrack_limit', (string) $limit );
+		}
+	}
+
+	/**
+	 * The same answer as that pattern -- and so as wp_strip_all_tags() --
+	 * wherever the pattern is quick enough to ask.
+	 */
+	#[DataProvider( 'markup' )]
+	public function test_strip_tags_agrees_with_the_one_pattern( string $html ): void {
+		$pattern = trim( strip_tags( (string) preg_replace( '@<(script|style)[^>]*?>.*?</\\1>@si', '', $html ) ) );
+
+		$this->assertSame( $pattern, Text::strip_tags( $html ) );
+	}
+
+	/**
+	 * @return array<string, array{string}>
+	 */
+	public static function markup(): array {
+		return array(
+			'closed'               => array( 'a<script>x</script>b<style>y</style>c' ),
+			'case'                 => array( 'a<SCRIPT type="x">x</Script>b' ),
+			'unclosed'             => array( 'a<script>x b' ),
+			'unclosed, then style' => array( '<script>a<style>b</style>c' ),
+			'wrong closer'         => array( '<script>a</style>b</script>c' ),
+			'never finished'       => array( 'a<script b' ),
+			'tag in a tag'         => array( '<script <style>x</style>y' ),
+			'longer name'          => array( '<scripts>a</script>b' ),
+			'two in a row'         => array( '<style>a</style><style>b</style>c' ),
+			'closer first'         => array( '</script>a<script>b</script>c' ),
+			'spaced closer'        => array( '<script>a</script >b' ),
+			'closer inside opener' => array( '<script a="</script>">b</script>c' ),
+			'nothing'              => array( '' ),
+		);
+	}
+
 	public function test_excerpt_keeps_tags_unless_asked(): void {
 		$this->assertSame( '<b>Hi</b> there', Text::excerpt( "<b>Hi</b>\n\nthere" ) );
 		$this->assertSame( 'Hi there', Text::excerpt( "<b>Hi</b>\n\nthere", strip_tags: true ) );
