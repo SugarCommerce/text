@@ -24,8 +24,10 @@ namespace SugarCommerce\Text;
  *
  * In PHP rather than SQL because LIKE can do the first and not the second,
  * and a list somebody searches by eye is at most a few thousand names. The
- * rules are mirrored exactly by `@arraypress/text`'s `matchesAll()`, so a
- * search in the browser finds what the same search on the server finds.
+ * rules are mirrored by `@arraypress/text`'s `matchesAll()`, so a
+ * search in the browser finds what the same search on the server finds --
+ * except that the server looks for only the first MAX_TERMS different
+ * words of a query.
  *
  * @since 1.0.0
  */

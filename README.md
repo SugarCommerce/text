@@ -192,8 +192,8 @@ Search::matches( 'Midnight Drive - Master.wav', 'drive midnigth' ); // true -- a
 Search::filter( $files, $_GET['s'] ?? '', 'name' );        // the rows that match, in order
 ```
 
-Every word typed has to be found; a word of four letters or more may be one edit out; accents are ignored where intl is
-installed. In PHP rather than SQL because `LIKE` can do the first and not the second.
+Every word typed has to be found -- the first sixteen different ones; a word of four letters or more may be one edit
+out; accents are ignored where intl is installed. In PHP rather than SQL because `LIKE` can do the first and not the second.
 
 ## Pagination
 
@@ -290,43 +290,25 @@ Color::ratio( '#d0ecfb', '#0d5e8c' );     // 5.7 -- null when either is not a co
 Color::readable( $text, $background );    // WCAG AA: 4.5, or 3 with large: true
 ```
 
+## Security
 
-## Moving from arraypress/wp-*
-
-`ArrayPress\FormatUtils\X` is now `SugarCommerce\Text\X` unless the table says otherwise; every method of `Text`,
-`Numbers`, `Booleans`, `Bytes`, `Duration`, `FileType`, `Csv`, `MissingColumns` and `Input` keeps its name and
-arguments. Text domain `arraypress` is now `sugarcommerce`.
-
-| Old | New |
-|---|---|
-| `ArrayPress\FormatUtils\Avatar` | `SugarCommerce\Text\Display\Avatar` |
-| `ArrayPress\FormatUtils\Palette` | `SugarCommerce\Text\Display\Palette` |
-| `ArrayPress\FormatUtils\Sparkline` | `SugarCommerce\Text\Display\Sparkline` |
-| `Palette::contrast( $one, $other )` | `Display\Color::ratio()` -- null, not 1, when either is not a colour |
-| `Palette::hex()` | `Display\Color::hex()` -- writes `#rrggbb` lower case, so `Palette::clean()` now does too |
-| `Input::hex_colour()` | `Display\Color::hex()` -- now also reads `#abc` and a colour without its `#` |
-| `ArrayPress\FieldKit\Support\Color` (fields' `Support\Color`) | `SugarCommerce\Text\Display\Color`, same methods |
-| `ArrayPress\RegisterEmails\Utils\Color::hex( $v, $fallback )` | `Display\Color::hex( $v, $fallback )`; `is_light()` is WCAG now, not YIQ brightness over 150 |
-| `ArrayPress\FormatUtils\{Text,Numbers,Booleans,Bytes,Duration,FileType,Csv,MissingColumns,Input}` | `SugarCommerce\Text\…`, same name |
-| `Str::contains_any()`, `contains_all()`, `starts_with()`, `ends_with()`, `matches_any()`, `is_alphanumeric()` | `Strings::` the same |
-| `Str::replace_first()`, `replace_last()`, `between()`, `reduce_whitespace()`, `remove_whitespace()`, `from()` | `Strings::` the same |
-| `Str::to_array( $value, $sep )` | `Strings::split( $value, $sep )` |
-| `Str::to_words()` | `Strings::words()` |
-| `Str::to_lines()` | `Input::lines()` -- each line is now trimmed as well |
-| `Str::truncate( $value, $length, $suffix )` | `Text::cut()` -- same arguments; `Text::truncate()` is the word-safe one |
-| `Str::words( $value, $limit, $suffix )` | `Text::truncate_words()` |
-| `Str::excerpt( $html, $length )` | `Text::excerpt( $html, $length, strip_tags: true )` -- now cut at a word, with `…`; `Text::cut( Text::strip_tags( $html ), $length )` for the old exact cut |
-| `Str::initials( $name, $limit, $uppercase )` | `Text::acronym()` -- same arguments; `Text::initials()` is the two-letter one |
-| `Str::mask()` | `Text::mask()` |
-| `Str::camel()`, `snake()`, `title()`, `sentence()` | `Text::` the same |
-
-From the retired SaaS packages: `Format\Search` is `Search`; `Format\Text::middle()`, `name_case()`, `paragraphs()`,
-`Numbers::format_localized()`, `percent_localized()`, `Bytes::format_localized()`, `FileType::mime()` and `inline()` are
-here under the same names; `Sanitize\Input::clean_text()` is `Input::text()`, `Input::mask()` is `Text::redact()`, and
-its other methods are `Input::` the same; `Paginate\Page` is `Pagination`, with `Paginator::SIZES` and `check_sizes()`
-on it. Not carried over: `Paginator` (it ran SQL against `sugarcommerce/sqlite`; a WordPress list counts and fetches
-with `$wpdb` or a table library and takes `Pagination::of()` from here), and `Input::email()` / `mask_email()`, which
-are `sugarcommerce/network`'s.
+* A spreadsheet never runs an exported cell: one that starts with `=`, `+`, `-`, `@`, `|`, a tab or a carriage return,
+  after leading whitespace too, gets an apostrophe, and a cell with a `;` in it is quoted so Excel in Europe cannot split
+  a formula out of it
+* Text that displays as something else is cleaned: `Input::visible()` and everything built on it take out control
+  characters, bidirectional overrides and isolates, zero-width characters and the tag block, and refuse invalid UTF-8;
+  `FileType::pretty()` takes the reordering marks out of a filename
+* `Input::url()` refuses every scheme but http(s), so `javascript:` and `data:` never reach an href; `Input::origin()`
+  refuses a URL with credentials in it and any host that is not plain letters, digits, dots and hyphens
+* A number from a request cannot run past its bounds: `Input::int()` clamps (`1e30` is the maximum, not a wrapped
+  number), `Input::limit()` and `Pagination::slice()` cap a page size, and `Input::one_of()` is the allow-list for a
+  column name that has to reach SQL
+* Unclosed `<script>` tags in `Text::strip_tags()` and `Text::excerpt()` cost what reading them costs, not its square
+* A search query pasted in with thousands of words costs what reading it costs: each word is looked for once, and only
+  the first sixteen different ones
+* `Text::mask()` and `Text::redact()` mark the secret `#[\SensitiveParameter]`, so it is not in a stack trace
+* `Avatar` and `Sparkline` escape every attribute and piece of text they write (Sparkline's `inside` is documented as
+  markup); `FileType::inline()` never offers an SVG to show in place
 
 ## Requirements
 
