@@ -257,6 +257,22 @@ $batch  = $reader->batch( 200, 100 );            // { rows, malformed, offset, c
 CsvReader::forget( $path );                      // when the file is deleted
 ```
 
+## Slugs
+
+```php
+use SugarCommerce\Text\Slug;
+
+Slug::make( 'Naïve Café' );                                  // naive-cafe; 日本語のファイル is ri-ben-yunofairu
+Slug::unique( $title, fn( $slug ) => my_slug_taken( $slug ) ); // hello-world-2, hello-world-3, …
+Slug::is_valid( 'hello-world' );                             // lower case, single separators
+Slug::clean( $typed, 3, 30, [ 'admin' ] );                   // a handle as typed, or '' -- never fixed up
+```
+
+`make()` transliterates rather than strips (ext-intl, then core's
+`remove_accents()`, then iconv), cuts at a word boundary, and is never
+empty. `unique()` stops after a thousand tries and falls back to a random
+suffix, so a broken callback cannot spin forever.
+
 ## Yes and no
 
 ```php
@@ -311,7 +327,7 @@ Color::readable( $text, $background );    // WCAG AA: 4.5, or 3 with large: true
 ## Layout
 
 * `src/`: one class a job, all static (`Text`, `Strings`, `Numbers`, `Bytes`,
-  `Duration`, `FileType`, `Input`, `Search`, `Csv`, `CsvReader`, `Booleans`); `Text` and
+  `Duration`, `FileType`, `Input`, `Search`, `Csv`, `CsvReader`, `Slug`, `Booleans`); `Text` and
   `Input` keep one trait per job in `src/Traits/<Class>/`.
 * `src/Display/`: pictures drawn from data, `Avatar`, `Color`, `Palette` and
   `Sparkline`.
